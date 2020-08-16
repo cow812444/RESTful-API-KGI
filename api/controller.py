@@ -6,36 +6,58 @@ db_data = fake_db_data.db_data
 
 def setup_route(api):
 
-    api.add_resource(SqlDB, '/get/<db_name>/<key>/<value>')
+    # 查詢所有會員 : GET
+    api.add_resource(Users, '/<db_name>')
 
-    #api.add_resource(SqlDB, '/<string: db_name>/post/<string: key>/<string: value>')
+    # 查詢 : GET , 刪除 : DELETE , 修改 : PUT
+    api.add_resource(User, '/<db_name>/<pid>')
 
-    #api.add_resource(SqlDB, '/<string: db_name>/delete/<string: key>/<string: value>')
+    # 新增會員 : POST
+    api.add_resource(PostUser, '/<db_name>')
 
-    #api.add_resource(SqlDB, '/<string: db_name>/put/<string: key>/<string: value>')
+class Users(Resource):
+    def get(self, db_name):
+        if db_name not in db_data:
+            return Response(json.dumps({'status':'404','message': 'Not Found'}), status=404)
+        return Response(json.dumps(db_data[db_name]), status=200)
 
 
-class SqlDB(Resource):
-    def get(self, db_name, key, value):
+class User(Resource):
+    def get(self, db_name, pid):
 
         # 檢查db_name是否正確
-        try: a = db_data[db_name]
-        except Exception as e: raise e
+        if db_name not in db_data:
+            return Response(json.dumps({'status':'404','message': 'Not Found'}), status=404)
 
         # 確認value是否存在key值中
         for customer_data in db_data[db_name]:
-            if key in customer_data:
-                if customer_data[key] == value:
-                    return customer_data
+            if customer_data['PID'] == pid:
+                return Response(json.dumps(customer_data), status=200)
 
         # 找不到key值或value不正確
-        return {'message': 'key_error'}
+        return Response(json.dumps({'status':'200','message': 'key_error'}), status=200)
 
-    def post(self, db_name, key, value):
+    def delete(self, db_name, pid):
         pass
 
-    def delete(self, db_name, key, value):
+    def put(self, db_name, PID):
         pass
 
-    def put(self, db_name, key, value):
-        pass
+class PostUser(Resource):
+    def post(self, db_name):
+        json_from_request = jsonLoads(request.stream)
+        required_args = []
+
+        if db_name == 'cc':
+            required_args = ['CampaignID', 'ProdType', 'CustName', 'MP1', 'MP2', 'O1', 'O2', 'H1', 'H2', 'H3', 'H4', '連絡人電話一', '戶籍1']
+        elif db_name == 'gm':
+            required_args = ['CampaignID', 'ProdType', 'CustName', 'MP1', 'MP2', 'O1', 'O2', 'H1', 'H2', 'H3', 'H4', '連絡人電話一', '戶籍1']
+        else:
+            return Response(json.dumps({'status':'404','message': 'Not Found'}), status=404)
+
+        for args_ in required_args:
+            if args_ not in json_from_request:
+                return Response(json.dumps({'status':'400','message': 'Bad Request: '+args_}), status=400)
+
+        db_data[db_name].append(json_from_request)
+        return Response(json.dumps({'status':'201','message': 'Created'}), status=201)
